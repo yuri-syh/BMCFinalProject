@@ -102,11 +102,9 @@ class _ProductsScreenState extends State<ProductsScreen> {
             ),
 
 
-            // Expanded area para sa mga main menu items
-            // Ito ay gumagamit ng ListView para maging scrollable
             Expanded(
               child: ListView(
-                padding: EdgeInsets.zero, // Alisin ang default padding ng ListView
+                padding: EdgeInsets.zero,
                 children: [
                   // My Account
                   ListTile(

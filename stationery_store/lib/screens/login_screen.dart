@@ -17,9 +17,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool loading = false;
   bool _isPasswordVisible = false;
 
-  static const Color _loginTextColor = Color(0xFF464C56); // #464c56
-  static const Color _boxFillColor = Color(0xFFD5D6D9); // #d5d6d9 (Light Gray)
-  static const double _fillOpacity = 0.15; // 15% transparency
+  static const Color _loginTextColor = Color(0xFF464C56);
+  static const Color _boxFillColor = Color(0xFFD5D6D9);
+  static const double _fillOpacity = 0.15;
 
   @override
   void dispose() {
@@ -51,7 +51,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         // Error messages
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message ?? "An unexpected error occurred during login.")),
+          SnackBar(
+              content: Text(
+                  e.message ?? "An unexpected error occurred during login.")),
         );
       }
     } finally {
@@ -83,11 +85,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
           // 3. Login Content
           Center(
-            child: SingleChildScrollView( // Added for better handling on small screens
+            child: SingleChildScrollView(
+              // Added for better handling on small screens
               padding: const EdgeInsets.all(24),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // --- DINAGDAG NA LOGO ---
+                  // Siguraduhin na mayroon kang 'assets/images/logo.png' sa iyong proyekto
+                  // at idinagdag mo ito sa 'pubspec.yaml'
+                  Image.asset(
+                    'assets/images/logo.png',
+                    height: 150, // Pwede mong baguhin ang taas nito
+                    errorBuilder: (context, error, stackTrace) {
+                      // Fallback kung walang image
+                      return const Icon(
+                        Icons.store,
+                        size: 100,
+                        color: Colors.white,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  // --- END NG LOGO ---
+
                   const Text(
                     "Log In",
                     style: TextStyle(
@@ -105,7 +126,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: "Email",
-                      prefixIcon: const Icon(Icons.email, color: Colors.white70),
+                      prefixIcon:
+                      const Icon(Icons.email, color: Colors.white70),
                       labelStyle: const TextStyle(color: Colors.white70),
                       // I-activate ang field background fill
                       filled: true,
@@ -113,12 +135,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       fillColor: _boxFillColor.withOpacity(_fillOpacity),
                       enabledBorder: OutlineInputBorder(
                         // Border opacity for enabled state
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                        borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.3)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       focusedBorder: OutlineInputBorder(
                         // Border opacity for focused state
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.6)),
+                        borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.6)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
@@ -139,7 +163,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       suffixIcon: IconButton(
                         icon: Icon(
                           // Choose the icon based on password visibility
-                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                           color: Colors.white70,
                         ),
                         onPressed: () {
@@ -155,12 +181,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       fillColor: _boxFillColor.withOpacity(_fillOpacity),
                       enabledBorder: OutlineInputBorder(
                         // Border opacity for enabled state
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                        borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.3)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       focusedBorder: OutlineInputBorder(
                         // Border opacity for focused state
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.6)),
+                        borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.6)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
@@ -182,10 +210,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2))
+                          child:
+                          CircularProgressIndicator(strokeWidth: 2))
                           : const Text(
                         "Login",
-                        style: TextStyle(fontSize: 18, color: _loginTextColor), // Updated text color
+                        style: TextStyle(
+                            fontSize: 18, color: _loginTextColor), // Updated text color
                       ),
                     ),
                   ),
@@ -197,7 +227,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                     text: TextSpan(
                       style: const TextStyle(
-                        color: Colors.white70, // Slightly lighter color for the static part
+                        color: Colors
+                            .white70, // Slightly lighter color for the static part
                         fontSize: 14,
                       ),
                       children: [

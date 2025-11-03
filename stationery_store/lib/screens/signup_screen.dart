@@ -23,7 +23,6 @@ class _SignupScreenState extends State<SignupScreen> {
   static const double _fillOpacity = 0.15;
   static const Color _loginTextColor = Color(0xFF464C56);
 
-
   @override
   void dispose() {
     _name.dispose();
@@ -52,7 +51,8 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() => loading = true);
     try {
-      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final userCredential =
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _email.text.trim(),
         password: _password.text.trim(),
       );
@@ -64,12 +64,14 @@ class _SignupScreenState extends State<SignupScreen> {
       if (mounted) {
         Navigator.pushReplacement(
           // FIX: Removed 'const'
-            context, MaterialPageRoute(builder: (_) => LoginScreen()));
+            context,
+            MaterialPageRoute(builder: (_) => LoginScreen()));
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.message ?? "An unexpected error occurred during signup.")));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                e.message ?? "An unexpected error occurred during signup.")));
       }
     } finally {
       if (mounted) {
@@ -104,6 +106,24 @@ class _SignupScreenState extends State<SignupScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // --- DINAGDAG NA LOGO ---
+                  // Siguraduhin na mayroon kang 'assets/images/logo.png' sa iyong proyekto
+                  // at idinagdag mo ito sa 'pubspec.yaml'
+                  Image.asset(
+                    'assets/images/logo.png',
+                    height: 150, // Pwede mong baguhin ang taas nito
+                    errorBuilder: (context, error, stackTrace) {
+                      // Fallback kung walang image
+                      return const Icon(
+                        Icons.store,
+                        size: 100,
+                        color: Colors.white,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  // --- END NG LOGO ---
+
                   const Text(
                     "Create New Account",
                     style: TextStyle(
@@ -121,22 +141,24 @@ class _SignupScreenState extends State<SignupScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: "Name",
-                      prefixIcon: const Icon(Icons.person, color: Colors.white70),
+                      prefixIcon:
+                      const Icon(Icons.person, color: Colors.white70),
                       labelStyle: const TextStyle(color: Colors.white70),
                       filled: true,
                       fillColor: _boxFillColor.withOpacity(_fillOpacity),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                        borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.3)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.6)),
+                        borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.6)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
-
 
                   // Email Field
                   TextField(
@@ -145,16 +167,19 @@ class _SignupScreenState extends State<SignupScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: "Email",
-                      prefixIcon: const Icon(Icons.email, color: Colors.white70),
+                      prefixIcon:
+                      const Icon(Icons.email, color: Colors.white70),
                       labelStyle: const TextStyle(color: Colors.white70),
                       filled: true,
                       fillColor: _boxFillColor.withOpacity(_fillOpacity),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                        borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.3)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.6)),
+                        borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.6)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
@@ -174,7 +199,9 @@ class _SignupScreenState extends State<SignupScreen> {
                       // Suffix Icon (Toggle Eye)
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                           color: Colors.white70,
                         ),
                         onPressed: () {
@@ -186,11 +213,13 @@ class _SignupScreenState extends State<SignupScreen> {
                       filled: true,
                       fillColor: _boxFillColor.withOpacity(_fillOpacity),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                        borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.3)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.6)),
+                        borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.6)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
@@ -204,28 +233,34 @@ class _SignupScreenState extends State<SignupScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: "Confirm Password",
-                      prefixIcon: const Icon(Icons.lock_reset, color: Colors.white70),
+                      prefixIcon:
+                      const Icon(Icons.lock_reset, color: Colors.white70),
                       labelStyle: const TextStyle(color: Colors.white70),
                       // Suffix Icon (Toggle Eye)
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          _isConfirmPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                           color: Colors.white70,
                         ),
                         onPressed: () {
                           setState(() {
-                            _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                            _isConfirmPasswordVisible =
+                            !_isConfirmPasswordVisible;
                           });
                         },
                       ),
                       filled: true,
                       fillColor: _boxFillColor.withOpacity(_fillOpacity),
                       enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                        borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.3)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.6)),
+                        borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.6)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
@@ -247,10 +282,12 @@ class _SignupScreenState extends State<SignupScreen> {
                           ? const SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2))
+                          child:
+                          CircularProgressIndicator(strokeWidth: 2))
                           : const Text(
                         "Create Account",
-                        style: TextStyle(fontSize: 18, color: _loginTextColor),
+                        style: TextStyle(
+                            fontSize: 18, color: _loginTextColor),
                       ),
                     ),
                   ),
@@ -260,7 +297,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   // Back to Login
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text("Already have an account? Go back to Login",
+                    child: const Text(
+                        "Already have an account? Go back to Login",
                         style: TextStyle(
                             color: Colors.white,
                             decoration: TextDecoration.underline)),

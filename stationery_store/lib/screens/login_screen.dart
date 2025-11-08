@@ -6,7 +6,7 @@ import 'products_screen.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key}); // Gawing const
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -17,10 +17,36 @@ class _LoginScreenState extends State<LoginScreen> {
   final _password = TextEditingController();
   bool loading = false;
   bool _isPasswordVisible = false;
+  bool _isCheckingAuth = true;
 
   static const Color _loginTextColor = Color(0xFF464C56);
   static const Color _boxFillColor = Color(0xFFD5D6D9);
   static const double _fillOpacity = 0.15;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkCurrentUser();
+  }
+
+  void _checkCurrentUser() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const ProductsScreen()),
+        );
+      }
+    } else {
+      await Future.delayed(const Duration(milliseconds: 1235));
+      if (mounted) {
+        setState(() {
+          _isCheckingAuth = false;
+        });
+      }
+    }
+  }
+
 
   @override
   void dispose() {
@@ -29,36 +55,63 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  Future<String> _fetchUserRole(User user) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && doc.data()!.containsKey('role')) {
+        return doc.data()!['role'] as String;
+      }
+      return 'user';
+    } catch (e) {
+      print('Error fetching user role: $e');
+      return 'user';
+    }
+  }
+
   Future<void> _login() async {
-    // Input validation
     if (_email.text.trim().isEmpty || _password.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please enter both email and password.")));
+          const SnackBar(content: Text("Please enter email and password.")));
       return;
     }
 
-    setState(() => loading = true);
+    setState(() {
+      loading = true;
+    });
+
     try {
+      UserCredential userCredential =
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _email.text.trim(),
         password: _password.text.trim(),
       );
 
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const ProductsScreen()),
+        );
       }
     } on FirebaseAuthException catch (e) {
+      String message = 'Login failed. Please check your credentials.';
+      if (e.code == 'user-not-found') {
+        message = 'No user found for that email.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Wrong password provided for that user.';
+      }
       if (mounted) {
-        // Error messages
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  e.message ?? "An unexpected error occurred during login.")),
-        );
+            const SnackBar(content: Text("An unexpected error occurred.")));
       }
     } finally {
       if (mounted) {
-        setState(() => loading = false);
+        setState(() {
+          loading = false;
+        });
       }
     }
   }
@@ -66,14 +119,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      extendBodyBehindAppBar: true,
       body: Stack(
         children: [
+          // 1. Background
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -86,65 +134,90 @@ class _LoginScreenState extends State<LoginScreen> {
             color: Colors.black.withOpacity(0.5),
           ),
 
-          // Login Content
           Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+            child: _isCheckingAuth
+                ? Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.shopping_cart, size: 100, color: Colors.white),
+                SizedBox(height: 20),
+                CircularProgressIndicator(color: Colors.white),
+                SizedBox(height: 10),
+                Text("Checking user session...", style: TextStyle(color: Colors.white70)),
+              ],
+            )
+                : SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 40.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 10),
-
                   const Text(
-                    "Log In",
+                    "Welcome!",
                     style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        shadows: [Shadow(blurRadius: 10, color: Colors.black)]),
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                  const SizedBox(height: 40),
-                  // Email Field
+                  const SizedBox(height: 50),
+
+                  // Email Text Field
                   TextField(
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      labelText: "Email",
-                      prefixIcon:
-                      const Icon(Icons.email, color: Colors.white70),
-                      labelStyle: const TextStyle(color: Colors.white70),
+                      labelText: 'Email',
+                      labelStyle: TextStyle(
+                          color: Colors.white.withOpacity(0.8), fontSize: 16),
+                      hintText: 'Enter your email address',
+                      hintStyle: TextStyle(
+                          color: Colors.white.withOpacity(0.5), fontSize: 14),
                       filled: true,
                       fillColor: _boxFillColor.withOpacity(_fillOpacity),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide:
-                        BorderSide(color: Colors.white.withOpacity(0.3)),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      focusedBorder: OutlineInputBorder(
+                      prefixIcon:
+                      const Icon(Icons.email, color: Colors.white),
+                      border: OutlineInputBorder(
                         borderSide:
                         BorderSide(color: Colors.white.withOpacity(0.6)),
                         borderRadius: BorderRadius.circular(8),
                       ),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.6)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(color: Colors.white),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 16),
 
-                  // Password Field
+                  const SizedBox(height: 20),
+
+                  // Password Text Field
                   TextField(
                     controller: _password,
                     obscureText: !_isPasswordVisible,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      labelText: "Password",
-                      prefixIcon: const Icon(Icons.lock, color: Colors.white70),
-                      labelStyle: const TextStyle(color: Colors.white70),
+                      labelText: 'Password',
+                      labelStyle: TextStyle(
+                          color: Colors.white.withOpacity(0.8), fontSize: 16),
+                      hintText: 'Enter your password',
+                      hintStyle: TextStyle(
+                          color: Colors.white.withOpacity(0.5), fontSize: 14),
+                      filled: true,
+                      fillColor: _boxFillColor.withOpacity(_fillOpacity),
+                      prefixIcon:
+                      const Icon(Icons.lock, color: Colors.white),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _isPasswordVisible
                               ? Icons.visibility
                               : Icons.visibility_off,
-                          color: Colors.white70,
+                          color: Colors.white.withOpacity(0.8),
                         ),
                         onPressed: () {
                           setState(() {
@@ -152,22 +225,24 @@ class _LoginScreenState extends State<LoginScreen> {
                           });
                         },
                       ),
-                      filled: true,
-                      fillColor: _boxFillColor.withOpacity(_fillOpacity),
+                      border: OutlineInputBorder(
+                        borderSide:
+                        BorderSide(color: Colors.white.withOpacity(0.6)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       enabledBorder: OutlineInputBorder(
                         borderSide:
-                        BorderSide(color: Colors.white.withOpacity(0.3)),
+                        BorderSide(color: Colors.white.withOpacity(0.6)),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderSide:
-                        BorderSide(color: Colors.white.withOpacity(0.6)),
+                        borderSide: const BorderSide(color: Colors.white),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 40),
 
                   // Login Button
                   SizedBox(
@@ -189,8 +264,36 @@ class _LoginScreenState extends State<LoginScreen> {
                         "Login",
                         style: TextStyle(
                             fontSize: 18, color: _loginTextColor),
-
                       ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Register
+                  RichText(
+                    text: TextSpan(
+                      text: 'Don\'t have an account? ',
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.8), fontSize: 16),
+                      children: <TextSpan>[
+                        TextSpan(
+                          text: 'Sign Up',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const SignupScreen()),
+                              );
+                            },
+                        ),
+                      ],
                     ),
                   ),
                 ],

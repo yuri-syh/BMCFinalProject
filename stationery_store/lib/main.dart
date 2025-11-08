@@ -7,27 +7,44 @@ import 'package:provider/provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/favorites_provider.dart';
 import 'providers/address_provider.dart';
-import 'package:stationery_store/admin/admin_add_product_screen.dart';
+import 'screens/admin_home_screen.dart'; // Siguraduhin na ito ang tama
 import 'screens/login_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/products_screen.dart';
+import 'screens/signup_screen.dart';
+import 'screens/cart_screen.dart';
+import 'screens/checkout_screen.dart';
+// Alisin ang import na ito:
+// import 'package:stationery_store/admin/admin_panel_screen.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const StationeryApp());
+// ... (Walang pagbabago sa main function)
 }
 
 class StationeryApp extends StatelessWidget {
   const StationeryApp({super.key});
 
   Future<Widget> _getRoleBasedScreen(User user) async {
-    if (user.uid.isEmpty) {
-      return const WelcomeScreen();
-    }
-      return const ProductsScreen();
-  }
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
 
+      // FIX DITO: Palitan ang AdminAddProductScreen() ng AdminHomeScreen()
+      if (doc.exists && doc.data()?['role'] == 'admin') {
+        return const AdminHomeScreen();
+      }
+
+      // Para sa normal na user
+      return const ProductsScreen(); // ProductsScreen ang dapat na home ng user
+      // Kung ginagamit mo pa rin ang 'HomeScreen', palitan mo ito.
+
+    } catch (e) {
+      print('Error fetching user role for routing: $e');
+      return const ProductsScreen(); // Fallback to ProductsScreen/HomeScreen
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -37,38 +54,44 @@ class StationeryApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AddressProvider()),
       ],
       child: MaterialApp(
-        title: 'Office Stationery Store',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(primarySwatch: Colors.blue),
-        home: StreamBuilder<User?>(
-          stream: FirebaseAuth.instance.authStateChanges(),
-          builder: (context, snapshot) {
+          title: 'Office Stationery Store',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(primarySwatch: Colors.blue),
 
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+          // AUTH WRAPPER
+          home: StreamBuilder<User?>(
+            stream: FirebaseAuth.instance.authStateChanges(),
+            builder: (context, snapshot) {
 
-            if (snapshot.hasData) {
-              final user = snapshot.data!;
-              return FutureBuilder<Widget>(
-                future: _getRoleBasedScreen(user),
-                builder: (context, roleSnapshot) {
-                  if (roleSnapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-                  if (roleSnapshot.hasError || !roleSnapshot.hasData) {
-                    // Log error for debugging and fallback
-                    print('Role fetch error: ${roleSnapshot.error}');
-                    return const ProductsScreen();
-                  }
-                  return roleSnapshot.data!;
-                },
-              );
-            }
-            return const WelcomeScreen();
-          },
-        ),
+              if (snapshot.hasData) {
+                final user = snapshot.data!;
+                return FutureBuilder<Widget>(
+                  future: _getRoleBasedScreen(user),
+                  builder: (context, roleSnapshot) {
+                    if (roleSnapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (roleSnapshot.hasError || !roleSnapshot.hasData) {
+                      print('Role fetch error: ${roleSnapshot.error}');
+                    }
+                    return roleSnapshot.data!;
+                  },
+                );
+              }
+              return const WelcomeScreen();
+            },
+          ),
+
+          routes: {
+            '/products': (context) => const ProductsScreen(),
+            '/cart': (context) => const CartScreen(),
+            '/checkout': (context) => const CheckoutScreen(),
+          }
       ),
     );
   }

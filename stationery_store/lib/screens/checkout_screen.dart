@@ -3,7 +3,67 @@ import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import 'my_addresses_screen.dart';
 import '../providers/address_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/address.dart';
+
+class OrderSuccessScreen extends StatelessWidget {
+  const OrderSuccessScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.check_circle_outline,
+                color: Colors.green,
+                size: 100,
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Order Placed!',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Your order has been placed successfully.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 50),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF464c56),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text('Continue Shopping', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -18,6 +78,7 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   late String _selectedAddress;
   String? _selectedPaymentMethod = 'Cash on Delivery';
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -31,6 +92,32 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
+  Future<void> _saveOrder(CartProvider cart) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception("User is not logged in. Cannot place order.");
+    }
+
+    final orderItems = cart.items.map((cartItem) => {
+      'id': cartItem.id,
+      'name': cartItem.name,
+      'price': cartItem.price,
+      'quantity': cartItem.quantity,
+    }).toList();
+
+    await FirebaseFirestore.instance.collection('orders').add({
+      'uid': user.uid,
+      'email': user.email,
+      'timestamp': FieldValue.serverTimestamp(),
+      'grandTotal': cart.grandTotal,
+      'subTotal': cart.totalPrice,
+      'shippingFee': CartProvider.deliveryFee,
+      'address': _selectedAddress,
+      'paymentMethod': _selectedPaymentMethod,
+      'status': 'Pending', // Initial status
+      'items': orderItems,
+    });
+  }
   AppBar _buildAppBar() {
     return AppBar(
       title: const Text("Checkout"),
@@ -188,8 +275,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  // Order Placement
-  void _placeOrder(BuildContext context, CartProvider cart) {
+  void _placeOrder(BuildContext context, CartProvider cart) async {
+    if (_isLoading) return;
+
     if (_selectedAddress.startsWith('Address not yet selected') || _selectedAddress.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please select a shipping address first.")),
@@ -204,15 +292,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Order for ₱${cart.grandTotal.toStringAsFixed(2)} placed successfully! Payment Method: $_selectedPaymentMethod"),
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    setState(() {
+      _isLoading = true;
+    });
 
-    cart.clearCart();
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    try {
+      await _saveOrder(cart);
+      await Future.delayed(const Duration(seconds: 2));
+
+      // 3. I-clear ang Cart
+      cart.clearCart();
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const OrderSuccessScreen(),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error placing order: ${e.toString()}")),
+        );
+      }
+    }
   }
 
   @override
@@ -249,11 +360,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               _buildPriceBreakdown(context, cart),
               const SizedBox(height: 30),
 
-              // Place Order Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: _isLoading ? null : () {
                     _placeOrder(context, cart);
                   },
                   style: ElevatedButton.styleFrom(
@@ -265,7 +375,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                     elevation: 5,
                   ),
-                  child: Text('Place Order (₱${cart.grandTotal.toStringAsFixed(2)})', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: _isLoading
+                  // 4. Ipakita ang loading spinner
+                      ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 3,
+                    ),
+                  )
+                  // Normal button text
+                      : Text('Place Order (₱${cart.grandTotal.toStringAsFixed(2)})', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

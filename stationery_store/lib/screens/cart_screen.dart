@@ -1,7 +1,10 @@
+// lib/screens/cart_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import 'checkout_screen.dart';
+import '../models/product.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -12,9 +15,9 @@ class CartScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
+        // ... (Keep AppBar styling)
         title: const Text("My Cart"),
         foregroundColor: Colors.white,
-
         backgroundColor: Colors.transparent,
         elevation: 0,
         flexibleSpace: Container(
@@ -29,7 +32,6 @@ class CartScreen extends StatelessWidget {
             ),
           ),
         ),
-
       ),
       body: cart.items.isEmpty
           ? const Center(child: Text("Your cart is empty"))
@@ -37,29 +39,27 @@ class CartScreen extends StatelessWidget {
         children: [
           Expanded(
             child: ListView(
-              children: cart.items.values.map((cartItem) {
+              children: cart.items.map((cartItem) {
                 return ListTile(
                   leading: SizedBox(
                     width: 50,
                     height: 50,
                     child: Image.network(
-                      cartItem.product.imageUrl,
+                      'https://via.placeholder.com/150',
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) =>
                       const Center(child: Icon(Icons.image, size: 30)),
                     ),
                   ),
-
-                  title: Text(cartItem.product.name),
+                  title: Text(cartItem.name),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "₱${(cartItem.product.price * cartItem.quantity).toStringAsFixed(2)}",
+                        "₱${(cartItem.price * cartItem.quantity).toStringAsFixed(2)}",
                         style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF75a2b9)),
                       ),
                       const SizedBox(height: 4),
-                      // Quantity
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -71,15 +71,12 @@ class CartScreen extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                             child: Row(
                               children: [
-                                // Decrease button
                                 IconButton(
                                   constraints: const BoxConstraints(),
                                   padding: EdgeInsets.zero,
                                   icon: const Icon(Icons.remove, size: 14),
-                                  onPressed: () => cart.decreaseQuantity(cartItem.product.id),
+                                  onPressed: () => cart.decreaseQuantity(cartItem.id),
                                 ),
-
-                                // Quantity
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 6.0),
                                   child: Text(
@@ -87,13 +84,19 @@ class CartScreen extends StatelessWidget {
                                     style: const TextStyle(fontWeight: FontWeight.bold),
                                   ),
                                 ),
-
-                                // Increase button
                                 IconButton(
                                   constraints: const BoxConstraints(),
                                   padding: EdgeInsets.zero,
                                   icon: const Icon(Icons.add, size: 14),
-                                  onPressed: () => cart.addToCart(cartItem.product),
+                                  onPressed: () => cart.addToCart(
+                                    Product(
+                                      id: cartItem.id,
+                                      name: cartItem.name,
+                                      price: cartItem.price,
+                                      imageUrl: 'placeholder',
+                                      stock: 999,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -102,47 +105,66 @@ class CartScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-
-                  // Delete button
                   trailing: IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => cart.removeFromCart(cartItem.product.id),
+                    onPressed: () => cart.removeFromCart(cartItem.id),
                   ),
                 );
               }).toList(),
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("Subtotal: ₱${cart.totalPrice.toStringAsFixed(2)}",
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const CheckoutScreen(),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF75a2b9),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(150, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+            child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Total Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Grand Total:", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        Text("₱${cart.grandTotal.toStringAsFixed(2)}",
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF75a2b9))),
+                      ],
                     ),
-                    elevation: 5,
-                  ),
-                  child: const Text("Checkout", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 20),
+                    // Checkout Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: cart.totalItemCount > 0
+                            ? () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const CheckoutScreen(),
+                            ),
+                          );
+                        }
+                            : null, // Disable if cart is
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF75a2b9),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 5,
+                        ),
+                        child: const Text("Checkout", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          )
+          ),
         ],
       ),
     );

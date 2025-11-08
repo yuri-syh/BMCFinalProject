@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'order_history_screen.dart';
 import '../models/product.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/product_card.dart';
@@ -10,7 +11,8 @@ import 'login_screen.dart';
 import 'account_details_screen.dart';
 import 'my_addresses_screen.dart';
 import 'favorites_screen.dart';
-import 'package:stationery_store/admin/admin_add_product_screen.dart';
+import 'admin_order_screen.dart';
+import 'admin_home_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -28,12 +30,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
   final User? _currentUser = FirebaseAuth.instance.currentUser;
 
   late Future<String> _userRoleFuture;
+  late Future<String> _userNameFuture;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
     _userRoleFuture = _fetchUserRole();
+    _userNameFuture = _fetchUserName();
   }
 
   @override
@@ -64,11 +68,34 @@ class _ProductsScreenState extends State<ProductsScreen> {
     }
   }
 
+  Future<String> _fetchUserName() async {
+    if (_currentUser == null) return 'Guest User';
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .get();
+      return doc.data()?['name'] ?? 'User';
+    } catch (e) {
+      print("Error fetching user name: $e");
+      return 'User';
+    }
+  }
+
   void _navigateToAdminPanel() {
     Navigator.pop(context);
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const AdminAddProductScreen()),
+      MaterialPageRoute(builder: (_) => const AdminHomeScreen()),
+    );
+  }
+
+  void _navigateToMyOrders() {
+    Navigator.pop(context);
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
     );
   }
 
@@ -90,6 +117,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
         title: const Text('Office Stationery'),
         backgroundColor: ProductsScreen._appBarColor,
         actions: [
+
           FutureBuilder<String>(
             future: _userRoleFuture,
             builder: (context, snapshot) {
@@ -159,31 +187,36 @@ class _ProductsScreenState extends State<ProductsScreen> {
       drawer: Drawer(
         child: Column(
           children: <Widget>[
-            UserAccountsDrawerHeader(
-              decoration: BoxDecoration(
-                color: ProductsScreen._appBarColor,
-              ),
-              // User Account Icon
-              currentAccountPicture: const Padding(
-                padding: EdgeInsets.only(bottom: 5.0), // Konting baba
-                child: Icon(Icons.account_circle, size: 65, color: Colors.white),
-              ),
-              // Email
-              accountName: const Text(
-                'Aisle Kazuichi',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              accountEmail: Text(
-                _currentUser?.email ?? 'Guest User',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontSize: 15,
-                ),
-              ),
+            FutureBuilder<String>(
+                future: _userNameFuture,
+                builder: (context, snapshot) {
+                  final userName = snapshot.data ?? 'User';
+
+                  return UserAccountsDrawerHeader(
+                    decoration: BoxDecoration(
+                      color: ProductsScreen._appBarColor,
+                    ),
+                    currentAccountPicture: const Padding(
+                      padding: EdgeInsets.only(bottom: 5.0),
+                      child: Icon(Icons.account_circle, size: 65, color: Colors.white),
+                    ),
+                    accountName: Text(
+                      userName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    accountEmail: Text(
+                      _currentUser?.email ?? 'Guest User',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 15,
+                      ),
+                    ),
+                  );
+                }
             ),
 
             Expanded(
@@ -195,7 +228,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   return ListView(
                     padding: EdgeInsets.zero,
                     children: [
-                      // Account Details
                       ListTile(
                         leading: const Icon(Icons.person),
                         title: const Text('Account Details'),
@@ -205,7 +237,13 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         },
                       ),
 
-                      // Favorites
+                      if (!isAdmin)
+                        ListTile(
+                          leading: const Icon(Icons.receipt_long),
+                          title: const Text('My Orders'),
+                          onTap: _navigateToMyOrders,
+                        ),
+
                       if (!isAdmin)
                         ListTile(
                           leading: const Icon(Icons.favorite),
@@ -216,7 +254,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           },
                         ),
 
-                      // My Addresses
                       if (!isAdmin)
                         ListTile(
                           leading: const Icon(Icons.location_on),
@@ -227,7 +264,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           },
                         ),
 
-                      // Admin Panel
                       if (isAdmin)
                         ListTile(
                           leading: const Icon(Icons.admin_panel_settings, color: ProductsScreen._appBarColor),
@@ -240,7 +276,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               ),
             ),
 
-            const Divider(), // Horizontal line
+            const Divider(),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text('Logout', style: TextStyle(color: Colors.red)),
@@ -260,7 +296,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
           final isAdmin = snapshot.hasData && snapshot.data == 'admin';
 
           if (isAdmin) {
-            // Admin Home Screen
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(20.0),
@@ -285,10 +320,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
             );
           }
 
-          // User Home Screen
           return Column(
             children: [
-              // Search Bar
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: TextField(
@@ -312,7 +345,6 @@ class _ProductsScreenState extends State<ProductsScreen> {
                 ),
               ),
 
-              // Product
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance.collection('products').snapshots(),
